@@ -23,10 +23,15 @@
                 <i class="ph ph-magnifying-glass search-icon"></i>
                 <input type="text" id="searchInput" placeholder="카테고리나 브랜드명 검색...">
             </div>
-            <button id="addCategoryBtn" class="primary-btn">
-                <i class="ph ph-plus"></i>
-                카테고리 추가
-            </button>
+            <div class="header-right">
+                <button id="addCategoryBtn" class="primary-btn edit-only hidden">
+                    <i class="ph ph-plus"></i>
+                    카테고리 추가
+                </button>
+                <button id="lockBtn" class="lock-btn" title="편집 모드 잠금/해제">
+                    <i class="ph ph-lock" id="lockIcon"></i>
+                </button>
+            </div>
         </div>
     </header>
 

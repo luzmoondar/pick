@@ -14,10 +14,16 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const docRef = doc(db, "appData", "sharedData");
 
+// =============================================
+// ✏️ 비밀번호를 여기서 변경하세요!
+const PASSWORD = 'doodo28';
+// =============================================
+
 // 상태 관리
 let categories = [];
 let currentSearchTerm = '';
-let currentModalAction = null; // { type: 'CATEGORY' | 'ITEM', categoryId?: string }
+let currentModalAction = null; // { type: 'CATEGORY' | 'ITEM' | 'PASSWORD', categoryId?: string }
+let isEditMode = false;
 
 // DOM 요소
 const elements = {
@@ -26,7 +32,9 @@ const elements = {
     addCategoryBtn: document.getElementById('addCategoryBtn'),
     emptyState: document.getElementById('emptyState'),
     noResults: document.getElementById('noResults'),
-    
+    lockBtn: document.getElementById('lockBtn'),
+    lockIcon: document.getElementById('lockIcon'),
+
     // Modal
     modalOverlay: document.getElementById('modalOverlay'),
     modalTitle: document.getElementById('modalTitle'),
@@ -40,6 +48,7 @@ const elements = {
 function init() {
     setupEventListeners();
     loadData();
+    updateEditUI();
 }
 
 // --- 데이터 관리 ---
@@ -67,28 +76,37 @@ function generateId() {
     return Math.random().toString(36).substr(2, 9);
 }
 
+// --- 편집 모드 UI 업데이트 ---
+function updateEditUI() {
+    // 자물쇠 아이콘 변경
+    elements.lockIcon.className = isEditMode ? 'ph ph-lock-open' : 'ph ph-lock';
+    elements.lockBtn.title = isEditMode ? '편집 모드 잠금' : '편집 모드 해제 (비밀번호 필요)';
+    elements.lockBtn.classList.toggle('unlocked', isEditMode);
+
+    // 카테고리 추가 버튼 표시/숨김
+    elements.addCategoryBtn.classList.toggle('hidden', !isEditMode);
+
+    // 편집 전용 요소들 (삭제 버튼, 링크 추가 버튼) 업데이트를 위해 재렌더링
+    render();
+}
+
 // --- 렌더링 ---
 function render() {
     elements.categoriesGrid.innerHTML = '';
-    
+
     // 검색 필터링
     let filteredCategories = [];
-    
+
     if (currentSearchTerm.trim() === '') {
         filteredCategories = categories;
     } else {
         const lowerTerm = currentSearchTerm.toLowerCase();
-        
+
         filteredCategories = categories.map(cat => {
-            // 카테고리 이름이 매칭되는지 확인
             const catMatches = cat.name.toLowerCase().includes(lowerTerm);
-            
-            // 아이템 브랜드명이 매칭되는지 필터링
-            const matchedItems = cat.items.filter(item => 
+            const matchedItems = cat.items.filter(item =>
                 item.brand.toLowerCase().includes(lowerTerm)
             );
-            
-            // 카테고리 이름이 매칭되면 모든 아이템 보여주고, 아니면 매칭된 아이템만 보여줌
             if (catMatches || matchedItems.length > 0) {
                 return {
                     ...cat,
@@ -98,12 +116,17 @@ function render() {
             return null;
         }).filter(cat => cat !== null);
     }
-    
+
     // 빈 상태 표시 처리
     if (categories.length === 0) {
         elements.emptyState.classList.remove('hidden');
         elements.noResults.classList.add('hidden');
         elements.categoriesGrid.style.display = 'none';
+
+        // 편집 모드일 때만 "추가 버튼으로 시작하세요" 메시지 표시
+        elements.emptyState.querySelector('p').textContent = isEditMode
+            ? "우측 상단의 '카테고리 추가' 버튼을 눌러 시작해보세요."
+            : "아직 저장된 항목이 없습니다.";
         return;
     } else if (filteredCategories.length === 0) {
         elements.emptyState.classList.add('hidden');
@@ -111,105 +134,139 @@ function render() {
         elements.categoriesGrid.style.display = 'none';
         return;
     }
-    
+
     elements.emptyState.classList.add('hidden');
     elements.noResults.classList.add('hidden');
     elements.categoriesGrid.style.display = 'grid';
-    
+
     // 카테고리 렌더링
     filteredCategories.forEach(cat => {
         const card = document.createElement('div');
         card.className = 'category-card';
-        
+
         // Header
         const header = document.createElement('div');
         header.className = 'category-header';
-        
+
         const title = document.createElement('div');
         title.className = 'category-title';
         title.textContent = cat.name;
-        
-        const deleteCatBtn = document.createElement('button');
-        deleteCatBtn.className = 'icon-btn danger';
-        deleteCatBtn.innerHTML = '<i class="ph ph-trash"></i>';
-        deleteCatBtn.title = '카테고리 삭제';
-        deleteCatBtn.onclick = () => deleteCategory(cat.id);
-        
+
         header.appendChild(title);
-        header.appendChild(deleteCatBtn);
-        
+
+        // 편집 모드일 때만 삭제 버튼 추가
+        if (isEditMode) {
+            const deleteCatBtn = document.createElement('button');
+            deleteCatBtn.className = 'icon-btn danger';
+            deleteCatBtn.innerHTML = '<i class="ph ph-trash"></i>';
+            deleteCatBtn.title = '카테고리 삭제';
+            deleteCatBtn.onclick = () => deleteCategory(cat.id);
+            header.appendChild(deleteCatBtn);
+        }
+
         // Body
         const body = document.createElement('div');
         body.className = 'category-body';
-        
+
         const itemsList = document.createElement('div');
         itemsList.className = 'items-list';
-        
+
         cat.items.forEach(item => {
             const itemRow = document.createElement('div');
             itemRow.className = 'item-row';
-            
+
             const info = document.createElement('div');
             info.className = 'item-info';
-            
+
             const brandLink = document.createElement('a');
             brandLink.className = 'item-brand-link';
             brandLink.href = item.link.startsWith('http') ? item.link : `https://${item.link}`;
             brandLink.target = '_blank';
             brandLink.rel = 'noopener noreferrer';
             brandLink.title = item.brand;
-            
+
             const displayText = item.brand.length > 15 ? item.brand.substring(0, 15) + '...' : item.brand;
             brandLink.textContent = displayText;
-            
+
             info.appendChild(brandLink);
-            
-            const deleteItemBtn = document.createElement('button');
-            deleteItemBtn.className = 'icon-btn danger';
-            deleteItemBtn.innerHTML = '<i class="ph ph-x"></i>';
-            deleteItemBtn.title = '삭제';
-            deleteItemBtn.onclick = () => deleteItem(cat.id, item.id);
-            
+
             itemRow.appendChild(info);
-            itemRow.appendChild(deleteItemBtn);
-            
+
+            // 편집 모드일 때만 아이템 삭제 버튼 추가
+            if (isEditMode) {
+                const deleteItemBtn = document.createElement('button');
+                deleteItemBtn.className = 'icon-btn danger';
+                deleteItemBtn.innerHTML = '<i class="ph ph-x"></i>';
+                deleteItemBtn.title = '삭제';
+                deleteItemBtn.onclick = () => deleteItem(cat.id, item.id);
+                itemRow.appendChild(deleteItemBtn);
+            }
+
             itemsList.appendChild(itemRow);
         });
-        
-        const addItemBtn = document.createElement('button');
-        addItemBtn.className = 'add-item-btn';
-        addItemBtn.innerHTML = '<i class="ph ph-plus"></i> 링크 추가';
-        addItemBtn.onclick = () => openItemModal(cat.id);
-        
+
         body.appendChild(itemsList);
-        body.appendChild(addItemBtn);
-        
+
+        // 편집 모드일 때만 링크 추가 버튼 표시
+        if (isEditMode) {
+            const addItemBtn = document.createElement('button');
+            addItemBtn.className = 'add-item-btn';
+            addItemBtn.innerHTML = '<i class="ph ph-plus"></i> 링크 추가';
+            addItemBtn.onclick = () => openItemModal(cat.id);
+            body.appendChild(addItemBtn);
+        }
+
         card.appendChild(header);
         card.appendChild(body);
-        
+
         elements.categoriesGrid.appendChild(card);
     });
 }
 
-// --- 이벤트 핸들러 및 로직 ---
+// --- 이벤트 핸들러 ---
 function setupEventListeners() {
     elements.searchInput.addEventListener('input', (e) => {
         currentSearchTerm = e.target.value;
         render();
     });
-    
+
     elements.addCategoryBtn.addEventListener('click', openCategoryModal);
-    
+
+    elements.lockBtn.addEventListener('click', () => {
+        if (isEditMode) {
+            // 잠금
+            isEditMode = false;
+            updateEditUI();
+        } else {
+            // 비밀번호 입력 후 잠금 해제
+            openPasswordModal();
+        }
+    });
+
     elements.closeModalBtn.addEventListener('click', closeModal);
     elements.cancelModalBtn.addEventListener('click', closeModal);
     elements.modalOverlay.addEventListener('click', (e) => {
         if (e.target === elements.modalOverlay) closeModal();
     });
-    
+
     elements.modalForm.addEventListener('submit', handleModalSubmit);
 }
 
 // --- 모달 관리 ---
+function openPasswordModal() {
+    currentModalAction = { type: 'PASSWORD' };
+    elements.modalTitle.textContent = '편집 모드 잠금 해제';
+    elements.modalInputs.innerHTML = `
+        <div class="form-group">
+            <label for="passwordInput">비밀번호</label>
+            <input type="password" id="passwordInput" required placeholder="비밀번호를 입력하세요" autocomplete="off">
+            <p id="passwordError" class="error-msg hidden">비밀번호가 올바르지 않습니다.</p>
+        </div>
+    `;
+    elements.modalOverlay.classList.remove('hidden');
+    setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+}
+
 function openCategoryModal() {
     currentModalAction = { type: 'CATEGORY' };
     elements.modalTitle.textContent = '새 카테고리 추가';
@@ -248,7 +305,22 @@ function closeModal() {
 
 function handleModalSubmit(e) {
     e.preventDefault();
-    
+
+    if (currentModalAction.type === 'PASSWORD') {
+        const entered = document.getElementById('passwordInput').value;
+        if (entered === PASSWORD) {
+            isEditMode = true;
+            updateEditUI();
+            closeModal();
+        } else {
+            const errEl = document.getElementById('passwordError');
+            errEl.classList.remove('hidden');
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').focus();
+        }
+        return;
+    }
+
     if (currentModalAction.type === 'CATEGORY') {
         const name = document.getElementById('catName').value.trim();
         if (name) {
@@ -261,7 +333,7 @@ function handleModalSubmit(e) {
     } else if (currentModalAction.type === 'ITEM') {
         const brand = document.getElementById('itemBrand').value.trim();
         const link = document.getElementById('itemLink').value.trim();
-        
+
         if (brand && link) {
             const cat = categories.find(c => c.id === currentModalAction.categoryId);
             if (cat) {
@@ -273,7 +345,7 @@ function handleModalSubmit(e) {
             }
         }
     }
-    
+
     saveData();
     render();
     closeModal();
