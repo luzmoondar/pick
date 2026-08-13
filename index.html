@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pick - 나만의 구매 리스트</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-container">
+            <h1 class="logo">Pick<span class="dot">.</span></h1>
+            <div class="search-container">
+                <i class="ph ph-magnifying-glass search-icon"></i>
+                <input type="text" id="searchInput" placeholder="카테고리나 브랜드명 검색...">
+            </div>
+            <button id="addCategoryBtn" class="primary-btn">
+                <i class="ph ph-plus"></i>
+                카테고리 추가
+            </button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div id="emptyState" class="empty-state hidden">
+            <i class="ph ph-archive-box"></i>
+            <h2>아직 저장된 항목이 없습니다</h2>
+            <p>우측 상단의 '카테고리 추가' 버튼을 눌러 시작해보세요.</p>
+        </div>
+        
+        <div id="noResults" class="empty-state hidden">
+            <i class="ph ph-magnifying-glass-minus"></i>
+            <h2>검색 결과가 없습니다</h2>
+            <p>다른 검색어를 입력해 보세요.</p>
+        </div>
+
+        <div id="categoriesGrid" class="categories-grid">
+            <!-- Categories will be rendered here by JS -->
+        </div>
+    </main>
+
+    <!-- Modal Template -->
+    <div id="modalOverlay" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">타이틀</h2>
+                <button id="closeModalBtn" class="icon-btn"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="modalForm">
+                    <!-- Dynamic Inputs -->
+                    <div id="modalInputs"></div>
+                    <div class="modal-actions">
+                        <button type="button" id="cancelModalBtn" class="secondary-btn">취소</button>
+                        <button type="submit" class="primary-btn">저장</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
