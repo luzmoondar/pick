@@ -1,5 +1,18 @@
-// 로컬 스토리지 키
-const STORAGE_KEY = 'pick_data';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCdX4pbxKeMQnLL8pBluM9tkRKw8lRbxyU",
+  authDomain: "doodo-b7268.firebaseapp.com",
+  projectId: "doodo-b7268",
+  storageBucket: "doodo-b7268.firebasestorage.app",
+  messagingSenderId: "750868227610",
+  appId: "1:750868227610:web:a8ca3e7971af8c526793a3"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db, "appData", "sharedData");
 
 // 상태 관리
 let categories = [];
@@ -25,26 +38,28 @@ const elements = {
 
 // --- 초기화 ---
 function init() {
-    loadData();
     setupEventListeners();
-    render();
+    loadData();
 }
 
 // --- 데이터 관리 ---
 function loadData() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-        try {
-            categories = JSON.parse(saved);
-        } catch (e) {
-            console.error('Failed to parse local storage data');
+    onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            categories = docSnap.data().categories || [];
+        } else {
             categories = [];
         }
-    }
+        render();
+    }, (error) => {
+        console.error("데이터 동기화 실패:", error);
+    });
 }
 
 function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
+    setDoc(docRef, { categories }).catch((error) => {
+        console.error("데이터 저장 실패:", error);
+    });
 }
 
 // --- 유틸리티 ---
