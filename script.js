@@ -16,7 +16,7 @@ const docRef = doc(db, "appData", "sharedData");
 
 // =============================================
 // ✏️ 비밀번호를 여기서 변경하세요!
-const PASSWORD = 'doodo28';
+const PASSWORD = 'pick1234';
 // =============================================
 
 // 상태 관리
@@ -24,6 +24,7 @@ let categories = [];
 let currentSearchTerm = '';
 let currentModalAction = null; // { type: 'CATEGORY' | 'ITEM' | 'PASSWORD', categoryId?: string }
 let isEditMode = false;
+let currentTab = 'BOUGHT'; // 'BOUGHT' (내 추천템) | 'WISH' (먹기 전 위시템)
 
 // DOM 요소
 const elements = {
@@ -34,6 +35,8 @@ const elements = {
     noResults: document.getElementById('noResults'),
     lockBtn: document.getElementById('lockBtn'),
     lockIcon: document.getElementById('lockIcon'),
+    tabBought: document.getElementById('tabBought'),
+    tabWish: document.getElementById('tabWish'),
 
     // Modal
     modalOverlay: document.getElementById('modalOverlay'),
@@ -65,6 +68,7 @@ function loadData() {
     });
 }
 
+// 로컬 및 DB에 데이터 업데이트 공통 처리
 function saveData() {
     setDoc(docRef, { categories }).catch((error) => {
         console.error("데이터 저장 실패:", error);
@@ -78,15 +82,20 @@ function generateId() {
 
 // --- 편집 모드 UI 업데이트 ---
 function updateEditUI() {
-    // 자물쇠 아이콘 변경
     elements.lockIcon.className = isEditMode ? 'ph ph-lock-open' : 'ph ph-lock';
     elements.lockBtn.title = isEditMode ? '편집 모드 잠금' : '편집 모드 해제 (비밀번호 필요)';
     elements.lockBtn.classList.toggle('unlocked', isEditMode);
 
-    // 카테고리 추가 버튼 표시/숨김
     elements.addCategoryBtn.classList.toggle('hidden', !isEditMode);
 
-    // 편집 전용 요소들 (삭제 버튼, 링크 추가 버튼) 업데이트를 위해 재렌더링
+    render();
+}
+
+// --- 탭 전환 ---
+function switchTab(tab) {
+    currentTab = tab;
+    elements.tabBought.classList.toggle('active', tab === 'BOUGHT');
+    elements.tabWish.classList.toggle('active', tab === 'WISH');
     render();
 }
 
@@ -94,28 +103,46 @@ function updateEditUI() {
 function render() {
     elements.categoriesGrid.innerHTML = '';
 
-    // 검색 필터링
+    // 검색 및 탭 필터링
     let filteredCategories = [];
 
-    if (currentSearchTerm.trim() === '') {
-        filteredCategories = categories;
-    } else {
-        const lowerTerm = currentSearchTerm.toLowerCase();
+    const lowerTerm = currentSearchTerm.toLowerCase();
 
-        filteredCategories = categories.map(cat => {
-            const catMatches = cat.name.toLowerCase().includes(lowerTerm);
-            const matchedItems = cat.items.filter(item =>
-                item.brand.toLowerCase().includes(lowerTerm)
-            );
+    filteredCategories = categories.map(cat => {
+        const catMatches = cat.name.toLowerCase().includes(lowerTerm);
+        
+        // 탭 조건 필터링 (WISH는 isWish === true / BOUGHT는 isWish === false 또는 undefined)
+        const tabItems = cat.items.filter(item => 
+            currentTab === 'WISH' ? item.isWish === true : !item.isWish
+        );
+
+        // 검색어 조건 필터링
+        const matchedItems = tabItems.filter(item =>
+            item.brand.toLowerCase().includes(lowerTerm)
+        );
+
+        const hasItemsInTab = tabItems.length > 0;
+        const isEmptyCategory = cat.items.length === 0;
+
+        if (currentSearchTerm.trim() === '') {
+            // 검색어가 없을 때: 해당 탭에 아이템이 있거나, 아예 텅 빈 카테고리이면서 편집 모드일 때만 표시
+            if (hasItemsInTab || (isEmptyCategory && isEditMode)) {
+                return {
+                    ...cat,
+                    items: tabItems
+                };
+            }
+        } else {
+            // 검색어가 있을 때: 카테고리명이 일치하거나 매칭되는 아이템이 있을 때 표시
             if (catMatches || matchedItems.length > 0) {
                 return {
                     ...cat,
-                    items: catMatches ? cat.items : matchedItems
+                    items: catMatches ? tabItems : matchedItems
                 };
             }
-            return null;
-        }).filter(cat => cat !== null);
-    }
+        }
+        return null;
+    }).filter(cat => cat !== null);
 
     // 빈 상태 표시 처리
     if (categories.length === 0) {
@@ -123,15 +150,33 @@ function render() {
         elements.noResults.classList.add('hidden');
         elements.categoriesGrid.style.display = 'none';
 
-        // 편집 모드일 때만 "추가 버튼으로 시작하세요" 메시지 표시
+        elements.emptyState.querySelector('h2').textContent = "아직 등록된 카테고리가 없습니다";
         elements.emptyState.querySelector('p').textContent = isEditMode
             ? "우측 상단의 '카테고리 추가' 버튼을 눌러 시작해보세요."
-            : "아직 저장된 항목이 없습니다.";
+            : "아직 등록된 카테고리가 없습니다.";
         return;
     } else if (filteredCategories.length === 0) {
-        elements.emptyState.classList.add('hidden');
-        elements.noResults.classList.remove('hidden');
-        elements.categoriesGrid.style.display = 'none';
+        if (currentSearchTerm.trim() !== '') {
+            elements.emptyState.classList.add('hidden');
+            elements.noResults.classList.remove('hidden');
+            elements.categoriesGrid.style.display = 'none';
+        } else {
+            elements.emptyState.classList.remove('hidden');
+            elements.noResults.classList.add('hidden');
+            elements.categoriesGrid.style.display = 'none';
+            
+            if (currentTab === 'WISH') {
+                elements.emptyState.querySelector('h2').textContent = "아직 먹기 전 위시템이 없습니다";
+                elements.emptyState.querySelector('p').textContent = isEditMode
+                    ? "링크를 추가할 때 '아직 먹기 전'을 체크해 위시리스트에 담아보세요!"
+                    : "아직 추가된 위시템이 없습니다.";
+            } else {
+                elements.emptyState.querySelector('h2').textContent = "아직 추천템이 없습니다";
+                elements.emptyState.querySelector('p').textContent = isEditMode
+                    ? "카테고리를 추가하고 먹어본 추천 브랜드의 링크를 등록해보세요!"
+                    : "아직 추가된 추천템이 없습니다.";
+            }
+        }
         return;
     }
 
@@ -154,7 +199,6 @@ function render() {
 
         header.appendChild(title);
 
-        // 편집 모드일 때만 삭제 버튼 추가
         if (isEditMode) {
             const deleteCatBtn = document.createElement('button');
             deleteCatBtn.className = 'icon-btn danger';
@@ -189,11 +233,19 @@ function render() {
             brandLink.textContent = displayText;
 
             info.appendChild(brandLink);
-
             itemRow.appendChild(info);
 
-            // 편집 모드일 때만 아이템 삭제 버튼 추가
             if (isEditMode) {
+                // 위시리스트 탭이고 편집 모드일 때만 체크(완료) 버튼 추가
+                if (currentTab === 'WISH') {
+                    const checkItemBtn = document.createElement('button');
+                    checkItemBtn.className = 'icon-btn success';
+                    checkItemBtn.innerHTML = '<i class="ph ph-check"></i>';
+                    checkItemBtn.title = '먹어봄 (추천템으로 이동)';
+                    checkItemBtn.onclick = () => checkItem(cat.id, item.id);
+                    itemRow.appendChild(checkItemBtn);
+                }
+
                 const deleteItemBtn = document.createElement('button');
                 deleteItemBtn.className = 'icon-btn danger';
                 deleteItemBtn.innerHTML = '<i class="ph ph-x"></i>';
@@ -207,7 +259,6 @@ function render() {
 
         body.appendChild(itemsList);
 
-        // 편집 모드일 때만 링크 추가 버튼 표시
         if (isEditMode) {
             const addItemBtn = document.createElement('button');
             addItemBtn.className = 'add-item-btn';
@@ -223,7 +274,7 @@ function render() {
     });
 }
 
-// --- 이벤트 핸들러 ---
+// --- 이벤트 핸들러 및 로직 ---
 function setupEventListeners() {
     elements.searchInput.addEventListener('input', (e) => {
         currentSearchTerm = e.target.value;
@@ -234,14 +285,15 @@ function setupEventListeners() {
 
     elements.lockBtn.addEventListener('click', () => {
         if (isEditMode) {
-            // 잠금
             isEditMode = false;
             updateEditUI();
         } else {
-            // 비밀번호 입력 후 잠금 해제
             openPasswordModal();
         }
     });
+
+    elements.tabBought.addEventListener('click', () => switchTab('BOUGHT'));
+    elements.tabWish.addEventListener('click', () => switchTab('WISH'));
 
     elements.closeModalBtn.addEventListener('click', closeModal);
     elements.cancelModalBtn.addEventListener('click', closeModal);
@@ -292,6 +344,10 @@ function openItemModal(categoryId) {
             <label for="itemLink">URL 링크 주소</label>
             <input type="url" id="itemLink" required placeholder="https://..." autocomplete="off">
         </div>
+        <div class="form-checkbox-group">
+            <input type="checkbox" id="itemIsWish" ${currentTab === 'WISH' ? 'checked' : ''}>
+            <label for="itemIsWish">아직 먹기 전 (위시리스트에 추가)</label>
+        </div>
     `;
     elements.modalOverlay.classList.remove('hidden');
     setTimeout(() => document.getElementById('itemBrand').focus(), 100);
@@ -333,6 +389,7 @@ function handleModalSubmit(e) {
     } else if (currentModalAction.type === 'ITEM') {
         const brand = document.getElementById('itemBrand').value.trim();
         const link = document.getElementById('itemLink').value.trim();
+        const isWish = document.getElementById('itemIsWish').checked;
 
         if (brand && link) {
             const cat = categories.find(c => c.id === currentModalAction.categoryId);
@@ -340,7 +397,8 @@ function handleModalSubmit(e) {
                 cat.items.push({
                     id: generateId(),
                     brand,
-                    link
+                    link,
+                    isWish: isWish
                 });
             }
         }
@@ -349,6 +407,19 @@ function handleModalSubmit(e) {
     saveData();
     render();
     closeModal();
+}
+
+// --- 완료(먹어봄) 처리 ---
+function checkItem(categoryId, itemId) {
+    const cat = categories.find(c => c.id === categoryId);
+    if (cat) {
+        const item = cat.items.find(i => i.id === itemId);
+        if (item) {
+            item.isWish = false; // 위시 해제 -> 추천템 이동
+            saveData();
+            render();
+        }
+    }
 }
 
 // --- 삭제 기능 ---
