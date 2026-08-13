@@ -16,7 +16,7 @@ const docRef = doc(db, "appData", "sharedData");
 
 // =============================================
 // ✏️ 비밀번호를 여기서 변경하세요!
-const PASSWORD = 'pick1234';
+const PASSWORD = 'doodo28';
 // =============================================
 
 // 상태 관리
@@ -311,7 +311,7 @@ function openPasswordModal() {
     elements.modalInputs.innerHTML = `
         <div class="form-group">
             <label for="passwordInput">비밀번호</label>
-            <input type="password" id="passwordInput" required placeholder="비밀번호를 입력하세요" autocomplete="off">
+            <input type="password" id="passwordInput" required placeholder="비밀번호를 입력하세요" autocomplete="off" autocapitalize="none" autocorrect="off">
             <p id="passwordError" class="error-msg hidden">비밀번호가 올바르지 않습니다.</p>
         </div>
     `;
@@ -363,8 +363,8 @@ function handleModalSubmit(e) {
     e.preventDefault();
 
     if (currentModalAction.type === 'PASSWORD') {
-        const entered = document.getElementById('passwordInput').value;
-        if (entered === PASSWORD) {
+        const entered = document.getElementById('passwordInput').value.trim();
+        if (entered.toLowerCase() === PASSWORD.toLowerCase()) {
             isEditMode = true;
             updateEditUI();
             closeModal();
