@@ -422,7 +422,8 @@ button {
     }
     
     .search-container {
-        position: static;
+        position: relative;
+        left: 0;
         transform: none;
         max-width: 100%;
     }
