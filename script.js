@@ -157,7 +157,10 @@ function render() {
             brandLink.href = item.link.startsWith('http') ? item.link : `https://${item.link}`;
             brandLink.target = '_blank';
             brandLink.rel = 'noopener noreferrer';
-            brandLink.textContent = item.brand;
+            brandLink.title = item.brand;
+            
+            const displayText = item.brand.length > 15 ? item.brand.substring(0, 15) + '...' : item.brand;
+            brandLink.textContent = displayText;
             
             info.appendChild(brandLink);
             
