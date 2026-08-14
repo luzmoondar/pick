@@ -221,7 +221,7 @@ button {
 }
 
 .category-header {
-    padding: 1.25rem 1.5rem;
+    padding: 1.0rem 1.5rem;
     border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
