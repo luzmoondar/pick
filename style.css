@@ -226,13 +226,28 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: hsla(230, 85%, 60%, 0.06); /* 부드러운 브랜드 컬러 틴트 적용 */
+    background-color: #FF7A00; /* 파비콘의 주황색 적용 */
 }
 
 .category-title {
     font-size: 1.1rem;
     font-weight: 600;
-    color: hsl(230, 70%, 40%); /* 타이틀 글자 색상에 포인트 부여 */
+    color: #FFFFFF; /* 글씨는 흰색 */
+}
+
+/* 주황색 헤더 안의 버튼들 스타일 조정 (대비감 부여) */
+.category-header .icon-btn {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.category-header .icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+}
+
+.category-header .icon-btn.danger:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #FFFFFF;
 }
 
 .category-body {
