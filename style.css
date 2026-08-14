@@ -226,12 +226,13 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #fafbfc;
+    background-color: hsla(230, 85%, 60%, 0.06); /* 부드러운 브랜드 컬러 틴트 적용 */
 }
 
 .category-title {
     font-size: 1.1rem;
     font-weight: 600;
+    color: hsl(230, 70%, 40%); /* 타이틀 글자 색상에 포인트 부여 */
 }
 
 .category-body {
