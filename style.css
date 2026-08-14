@@ -226,7 +226,7 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #FF7A00; /* 파비콘의 주황색 적용 */
+    background-color: var(--primary); /* 브랜드 파란색 적용 */
 }
 
 .category-title {
@@ -235,7 +235,7 @@ button {
     color: #FFFFFF; /* 글씨는 흰색 */
 }
 
-/* 주황색 헤더 안의 버튼들 스타일 조정 (대비감 부여) */
+/* 파란색 헤더 안의 버튼들 스타일 조정 (대비감 부여) */
 .category-header .icon-btn {
     color: rgba(255, 255, 255, 0.8);
 }
